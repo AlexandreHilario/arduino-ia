@@ -11,10 +11,15 @@ PASTA_MODELO = BASE / "converted_tflite"
 
 def camera(indice):
     import cv2
-    cap = cv2.VideoCapture(indice)
+    origem = int(indice) if str(indice).isdigit() else indice
+    if isinstance(origem, str) and origem.startswith("/dev/video"):
+        cap = cv2.VideoCapture(origem, cv2.CAP_V4L2)
+    else:
+        cap = cv2.VideoCapture(origem)
     if not cap.isOpened():
         cap.release()
-        raise RuntimeError("Nao foi possivel abrir a camera. Tente --camera 1.")
+        raise RuntimeError(f"Nao foi possivel abrir a camera {indice}. Confira a origem e se o scrcpy esta ativo.")
+    print(f"Camera selecionada: {indice}")
     return cap
 
 
@@ -186,11 +191,11 @@ def main():
     comandos = parser.add_subparsers(dest="comando", required=True)
     captura = comandos.add_parser("capturar", help="Tirar fotos com ESPACO")
     captura.add_argument("classe", choices=CLASSES)
-    captura.add_argument("--camera", type=int, default=0)
+    captura.add_argument("--camera", default="0", help="Indice ou caminho, como /dev/video10")
     captura.set_defaults(func=capturar)
     executar_parser = comandos.add_parser("executar", help="Responder ao Arduino pela camera")
     executar_parser.add_argument("--porta", default="COM3")
-    executar_parser.add_argument("--camera", type=int, default=0)
+    executar_parser.add_argument("--camera", default="0", help="Indice ou caminho, como /dev/video10")
     executar_parser.add_argument("--sem-arduino", action="store_true")
     executar_parser.set_defaults(func=executar)
     avaliacao = comandos.add_parser("avaliar", help="Avaliar imagens novas, separadas do treino")

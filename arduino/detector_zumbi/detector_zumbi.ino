@@ -6,7 +6,7 @@ const byte TRIG = 11, ECHO = 9, PINO_SERVO = 7;
 const byte PINO_SERVO_VARREDURA = 13;
 const int VARREDURA_MIN = 20, VARREDURA_MAX = 160;
 const unsigned long PASSO_VARREDURA_MS = 20;
-const float DISTANCIA_CM = 200.0;
+const float DISTANCIA_CM = 100.0;
 const int REPOUSO = 0, ACIONADO = 60;
 const unsigned long TEMPO_RESPOSTA = 1500, TEMPO_PULSO = 1000, INTERVALO = 1500;
 Servo servo;

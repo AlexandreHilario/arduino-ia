@@ -115,6 +115,57 @@ Opcoes: `--camera 1`, `--confianca 0.85`, `--modelo caminho.tflite`,
 `--rotulos caminho/labels.txt`. No teste sem Arduino, a inferencia e continua.
 A classificacao nao exige tres confirmacoes: segue a decisao por imagem do PDF.
 
+## Usar a camera do celular por USB (Arch Linux / CachyOS)
+
+Execute os comandos do projeto na pasta `~/Projetos/arduino-ia`.
+Instale as ferramentas, caso ainda nao estejam instaladas:
+
+```bash
+sudo pacman -S scrcpy android-tools
+```
+
+Ative a depuracao USB no Android, conecte o celular e aceite a autorizacao
+na tela. Confira com `adb devices`: o estado deve ser `device`.
+
+No primeiro terminal, prepare a webcam virtual e inicie a camera traseira:
+
+```bash
+sudo modprobe v4l2loopback video_nr=10 card_label="Celular" exclusive_caps=1
+sudo setfacl -m "u:$USER:rw" /dev/video10
+scrcpy --video-source=camera --camera-facing=back --camera-size=1280x720 --camera-fps=30 --no-audio --v4l2-sink=/dev/video10 --no-playback
+```
+
+O modulo `v4l2loopback` precisa estar instalado para o kernel em uso.
+A permissao com `setfacl` precisa ser reaplicada se o dispositivo for recriado.
+Mantenha esse terminal rodando; se o scrcpy encerrar ou apresentar erro, resolva
+antes de abrir o Python. Com `exclusive_caps=1`, a camera fica disponivel para
+captura quando o scrcpy comeca a transmitir.
+
+Em outro terminal, teste a imagem sem Arduino:
+
+```bash
+cd ~/Projetos/arduino-ia
+.venv/bin/python projeto.py executar --sem-arduino --camera /dev/video10
+```
+
+Pressione Q para fechar o teste. Para testar tudo, carregue o sketch com
+`TESTE_MANUAL = false`, feche o Monitor Serial da Arduino IDE e execute:
+
+```bash
+.venv/bin/python projeto.py executar --porta /dev/ttyUSB0 --camera /dev/video10
+```
+
+Esses comandos usam o modelo padrao em `converted_tflite/`. Para usar o modelo
+treinado do zero, execute:
+
+```bash
+.venv/bin/python projeto.py executar --porta /dev/ttyUSB0 --camera /dev/video10 --modelo modelo_do_zero/model_unquant.tflite --rotulos modelo_do_zero/labels.txt
+```
+
+Use o caminho `/dev/video10` explicitamente para selecionar o celular.
+Se nao abrir, confira `ls -l /dev/video10`, as permissoes e a saida do scrcpy.
+Q encerra o projeto; Ctrl+C no primeiro terminal encerra a transmissao do celular.
+
 ## Avaliar
 
 Separe pelo menos 20 imagens novas por classe do modelo, de objetos/cenas nao usados

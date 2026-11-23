@@ -321,6 +321,10 @@ O treinamento e a classificação acontecem no computador. O arquivo `.tflite`
 não foi instalado no Arduino. O Arduino mede a distância e controla o mecanismo
 simbólico da maquete conforme a mensagem recebida.
 
+Ao receber `N` em resposta a uma análise, o servo de varredura volta a girar
+imediatamente. O sensor fica pausado por 2 segundos e depois mede a distância
+novamente, mesmo se a pessoa continuar por perto.
+
 O **limiar de 80%** é uma regra de decisão sobre a pontuação de uma imagem.
 A **acurácia de 100% na validação** é a proporção de imagens classificadas
 corretamente naquele conjunto. São medidas diferentes.

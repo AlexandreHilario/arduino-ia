@@ -9,12 +9,15 @@ const unsigned long PASSO_VARREDURA_MS = 20;
 const float DISTANCIA_CM = 100.0;
 const int REPOUSO = 0, ACIONADO = 60;
 const unsigned long TEMPO_RESPOSTA = 1500, TEMPO_PULSO = 1000, INTERVALO = 1500;
+const unsigned long PAUSA_APOS_N_MS = 2000;
 Servo servo;
 Servo servoVarredura;
 int anguloVarredura = 90, sentidoVarredura = 1;
 unsigned long ultimoPassoVarredura = 0;
 unsigned long ultimaMedicao = 0, pedidoEm = 0, pulsoEm = 0, ultimoPedido = 0;
+unsigned long pausaIniciadaEm = 0;
 bool perto = false, aguardando = false, ativo = false;
+bool deteccaoPausada = false;
 bool respondido = false;
 char comando[8];
 byte tamanho = 0;
@@ -22,6 +25,14 @@ byte tamanho = 0;
 void repousar() {
   servo.write(REPOUSO);
   ativo = false;
+}
+
+void retomarVarredura() {
+  aguardando = false;
+  respondido = false;
+  repousar();
+  pausaIniciadaEm = millis();
+  deteccaoPausada = true;
 }
 
 void setup() {
@@ -37,7 +48,10 @@ void setup() {
 
 void loop() {
   unsigned long agora = millis();
-  if (agora - ultimaMedicao >= 100) {
+  if (deteccaoPausada && agora - pausaIniciadaEm >= PAUSA_APOS_N_MS) {
+    deteccaoPausada = false;
+  }
+  if (!deteccaoPausada && agora - ultimaMedicao >= 100) {
     ultimaMedicao = agora;
     digitalWrite(TRIG, LOW);
     delayMicroseconds(2);
@@ -55,8 +69,7 @@ void loop() {
     }
   }
   agora = millis();
-  // Sem delay: continua lendo o sensor e os comandos durante a varredura.
-  if (!perto && agora - ultimoPassoVarredura >= PASSO_VARREDURA_MS) {
+  if ((!perto || deteccaoPausada) && agora - ultimoPassoVarredura >= PASSO_VARREDURA_MS) {
     ultimoPassoVarredura = agora;
     anguloVarredura += sentidoVarredura;
     if (anguloVarredura >= VARREDURA_MAX || anguloVarredura <= VARREDURA_MIN) {
@@ -81,8 +94,8 @@ void loop() {
           servo.write(ACIONADO);
           Serial.println("Z: servo acionado. Afaste e aproxime para repetir.");
         } else {
-          repousar();
-          Serial.println("N: servo em repouso. Afaste e aproxime para repetir.");
+          retomarVarredura();
+          Serial.println("N: varredura retomada. Sensor volta em 2 segundos.");
         }
       }
       continue;
@@ -90,8 +103,8 @@ void loop() {
     if (c == '\n') {
       comando[tamanho] = '\0';
       if (strcmp(comando, "N") == 0) {
-        aguardando = false;
-        repousar();
+        if (aguardando) retomarVarredura();
+        else repousar();
       } else if (strcmp(comando, "Z") == 0 && aguardando && perto &&
                  millis() - pedidoEm < TEMPO_RESPOSTA) {
         aguardando = false;
@@ -104,7 +117,7 @@ void loop() {
       if (tamanho < sizeof(comando) - 1) comando[tamanho++] = c;
     }
   }
-  if (perto && !aguardando && !ativo && (!TESTE_MANUAL || !respondido) &&
+  if (!deteccaoPausada && perto && !aguardando && !ativo && (!TESTE_MANUAL || !respondido) &&
       agora - ultimoPedido >= INTERVALO) {
     Serial.println("ANALISAR");
     if (TESTE_MANUAL) Serial.println("Envie Z para girar o servo ou N para manter em repouso.");
